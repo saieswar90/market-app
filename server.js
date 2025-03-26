@@ -31,66 +31,17 @@ const Price = mongoose.model('Price', priceSchema);
 app.use(cors());
 app.use(express.json());
 
-// GET all prices (for Host App)
-app.get('/api/prices', async (req, res) => {
-  try {
-    const prices = await Price.find().select('_id state district market commodity variety maxPrice avgPrice minPrice');
-    res.json(prices);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch prices" });
-  }
-});
-
-// POST add price (for Host App)
-app.post('/api/add-price', async (req, res) => {
-  try {
-    const newPrice = new Price(req.body);
-    await newPrice.save();
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to add price" });
-  }
-});
-
-// PUT update price (for Host App)
-app.put('/api/update-price/:id', async (req, res) => {
-  try {
-    await Price.findByIdAndUpdate(req.params.id, req.body);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to update price" });
-  }
-});
-
-// DELETE price (for Host App)
-app.delete('/api/delete-price/:id', async (req, res) => {
-  try {
-    await Price.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete price" });
-  }
-});
-
-// --- USER APP ENDPOINTS ---
-// GET unique districts (case-insensitive)
+/** -------------------------- GET UNIQUE DISTRICTS -------------------------- */
 app.get('/api/districts', async (req, res) => {
   try {
     const districts = await Price.aggregate([
-      { 
-        $project: { 
-          district: { $trim: { input: { $toLower: "$district" } } }
+      {
+        $group: {
+          _id: { $toLower: "$district" }, 
+          district: { $first: "$district" }
         }
       },
-      { 
-        $group: { 
-          _id: "$district", 
-          district: { $first: "$district" } 
-        }
-      },
-      { 
-        $project: { _id: 0, district: 1 } 
-      }
+      { $project: { _id: 0, district: 1 } }
     ]);
     res.json(districts.map(d => d.district));
   } catch (error) {
@@ -99,7 +50,7 @@ app.get('/api/districts', async (req, res) => {
   }
 });
 
-// GET unique markets by district (case-insensitive)
+/** -------------------------- GET UNIQUE MARKETS BY DISTRICT -------------------------- */
 app.get('/api/markets', async (req, res) => {
   try {
     const { district } = req.query;
@@ -112,6 +63,12 @@ app.get('/api/markets', async (req, res) => {
       { $group: { _id: { $toLower: "$market" }, market: { $first: "$market" } } },
       { $project: { _id: 0, market: 1 } }
     ]);
+
+    // Ensure markets are only returned if data exists
+    if (markets.length === 0) {
+      return res.status(404).json({ error: "No markets found for this district" });
+    }
+
     res.json(markets.map(m => m.market));
   } catch (error) {
     console.error('Error fetching markets:', error);
@@ -119,29 +76,28 @@ app.get('/api/markets', async (req, res) => {
   }
 });
 
-// GET unique commodities (crops) by district & market
-app.get('/api/crops', async (req, res) => {
+/** -------------------------- GET PRICES BASED ON DISTRICT & MARKET -------------------------- */
+app.get('/api/prices-by-filters', async (req, res) => {
   try {
     const { district, market } = req.query;
     if (!district || !market) {
       return res.status(400).json({ error: "District and market parameters are required" });
     }
 
-    const crops = await Price.aggregate([
-      { 
-        $match: { 
-          district: { $regex: `^${district}$`, $options: 'i' }, 
-          market: { $regex: `^${market}$`, $options: 'i' } 
-        } 
-      },
-      { $group: { _id: { $toLower: "$commodity" }, commodity: { $first: "$commodity" } } },
-      { $project: { _id: 0, commodity: 1 } }
-    ]);
+    const prices = await Price.find({
+      district: { $regex: `^${district}$`, $options: 'i' },
+      market: { $regex: `^${market}$`, $options: 'i' }
+    });
 
-    res.json(crops.map(c => c.commodity));
+    // Ensure prices exist before returning data
+    if (prices.length === 0) {
+      return res.status(404).json({ error: "No data found for the selected district and market" });
+    }
+
+    res.json(prices);
   } catch (error) {
-    console.error('Error fetching crops:', error);
-    res.status(500).json({ error: "Failed to fetch crops" });
+    console.error('Error fetching prices by filters:', error);
+    res.status(500).json({ error: "Failed to fetch prices" });
   }
 });
 
