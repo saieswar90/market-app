@@ -52,26 +52,31 @@ app.get("/api/markets", async (req, res) => {
       return res.status(400).json({ error: "District parameter is required" });
     }
 
-    // Fetch all records matching the district (case-insensitive match)
-    const records = await Price.find({
-      district: { $regex: new RegExp(`^${district}$`, "i") },
-    });
-
-    // Extract all markets under the district
-    const markets = [
-      ...new Set(records.map((record) => record.market?.trim()).filter(Boolean)),
-    ].sort();
+    // Aggregation pipeline to group markets by district
+    const markets = await Price.aggregate([
+      { 
+        $match: { district: { $regex: new RegExp(`^${district}$`, "i") } } 
+      }, // Case-insensitive match
+      {
+        $group: { 
+          _id: "$district", 
+          markets: { $addToSet: "$market" } 
+        }
+      }
+    ]);
 
     if (markets.length === 0) {
       return res.status(404).json({ error: "No markets found for this district" });
     }
 
-    res.json(markets);
+    // Extract and sort the markets list
+    res.json(markets[0].markets.sort());
   } catch (error) {
     console.error("❌ Error fetching markets:", error);
     res.status(500).json({ error: "Failed to fetch markets" });
   }
 });
+
 
 
 
