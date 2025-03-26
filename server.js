@@ -32,8 +32,16 @@ const Price = mongoose.model("Price", priceSchema);
 /** -------------------------- GET UNIQUE DISTRICTS -------------------------- */
 app.get("/api/districts", async (req, res) => {
   try {
-    const districts = await Price.distinct("district");
-    res.json(districts.sort()); // Sorting for better UI experience
+    let districts = await Price.distinct("district").collation({ locale: "en", strength: 2 });
+
+    // Remove empty/null values, trim, and sort
+    districts = districts
+      .filter(Boolean) // Remove null/undefined
+      .map(d => d.trim()) // Remove spaces
+      .filter((value, index, self) => self.indexOf(value) === index) // Ensure uniqueness
+      .sort();
+
+    res.json(districts);
   } catch (error) {
     console.error("❌ Error fetching districts:", error);
     res.status(500).json({ error: "Failed to fetch districts" });
@@ -48,8 +56,16 @@ app.get("/api/markets", async (req, res) => {
       return res.status(400).json({ error: "District parameter is required" });
     }
 
-    const markets = await Price.find({ district }).distinct("market");
-    res.json(markets.sort()); // Sorting for better UI experience
+    let markets = await Price.find({ district }).distinct("market").collation({ locale: "en", strength: 2 });
+
+    // Remove empty/null values, trim, and sort
+    markets = markets
+      .filter(Boolean)
+      .map(m => m.trim())
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .sort();
+
+    res.json(markets);
   } catch (error) {
     console.error("❌ Error fetching markets:", error);
     res.status(500).json({ error: "Failed to fetch markets" });
@@ -64,8 +80,16 @@ app.get("/api/commodities", async (req, res) => {
       return res.status(400).json({ error: "Market parameter is required" });
     }
 
-    const commodities = await Price.find({ market }).distinct("commodity");
-    res.json(commodities.sort());
+    let commodities = await Price.find({ market }).distinct("commodity").collation({ locale: "en", strength: 2 });
+
+    // Remove empty/null values, trim, and sort
+    commodities = commodities
+      .filter(Boolean)
+      .map(c => c.trim())
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .sort();
+
+    res.json(commodities);
   } catch (error) {
     console.error("❌ Error fetching commodities:", error);
     res.status(500).json({ error: "Failed to fetch commodities" });
@@ -81,6 +105,7 @@ app.get("/api/prices", async (req, res) => {
     }
 
     const prices = await Price.find({ district, market });
+
     res.json(prices);
   } catch (error) {
     console.error("❌ Error fetching prices:", error);
