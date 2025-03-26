@@ -33,14 +33,14 @@ const Price = mongoose.model("Price", priceSchema);
 app.get("/api/districts", async (req, res) => {
   try {
     const districts = await Price.distinct("district");
-    res.json(districts);
+    res.json(districts.sort()); // Sorting for better UI experience
   } catch (error) {
     console.error("❌ Error fetching districts:", error);
     res.status(500).json({ error: "Failed to fetch districts" });
   }
 });
 
-/** -------------------------- GET MARKETS BY DISTRICT -------------------------- */
+/** -------------------------- GET UNIQUE MARKETS BY DISTRICT -------------------------- */
 app.get("/api/markets", async (req, res) => {
   try {
     const { district } = req.query;
@@ -49,14 +49,14 @@ app.get("/api/markets", async (req, res) => {
     }
 
     const markets = await Price.find({ district }).distinct("market");
-    res.json(markets);
+    res.json(markets.sort()); // Sorting for better UI experience
   } catch (error) {
     console.error("❌ Error fetching markets:", error);
     res.status(500).json({ error: "Failed to fetch markets" });
   }
 });
 
-/** -------------------------- GET COMMODITIES BY MARKET -------------------------- */
+/** -------------------------- GET UNIQUE COMMODITIES BY MARKET -------------------------- */
 app.get("/api/commodities", async (req, res) => {
   try {
     const { market } = req.query;
@@ -65,7 +65,7 @@ app.get("/api/commodities", async (req, res) => {
     }
 
     const commodities = await Price.find({ market }).distinct("commodity");
-    res.json(commodities);
+    res.json(commodities.sort());
   } catch (error) {
     console.error("❌ Error fetching commodities:", error);
     res.status(500).json({ error: "Failed to fetch commodities" });
@@ -85,60 +85,6 @@ app.get("/api/prices", async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching prices:", error);
     res.status(500).json({ error: "Failed to fetch prices" });
-  }
-});
-
-/** -------------------------- ADD NEW PRICE RECORD -------------------------- */
-app.post("/api/add-price", async (req, res) => {
-  try {
-    const newPrice = new Price(req.body);
-    await newPrice.save();
-    res.status(201).json({ message: "✅ Price record added successfully" });
-  } catch (error) {
-    console.error("❌ Error adding price:", error);
-    res.status(500).json({ error: "Failed to add price record" });
-  }
-});
-
-/** -------------------------- UPDATE EXISTING PRICE RECORD -------------------------- */
-app.put("/api/update-price/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`Updating Price ID: ${id}`);
-
-    const updatedPrice = await Price.findByIdAndUpdate(id, req.body, { new: true });
-
-    if (!updatedPrice) {
-      return res.status(404).json({ error: "Price record not found" });
-    }
-
-    res.json({ message: "✅ Price record updated successfully", updatedPrice });
-  } catch (error) {
-    console.error("❌ Error updating price:", error);
-    res.status(500).json({ error: "Failed to update price record" });
-  }
-});
-
-/** -------------------------- DELETE A PRICE RECORD -------------------------- */
-app.delete("/api/delete-price/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log("🔍 Deleting price with ID:", id);
-
-    if (!id) {
-      return res.status(400).json({ error: "ID parameter is required" });
-    }
-
-    const deletedPrice = await Price.findByIdAndDelete(id);
-
-    if (!deletedPrice) {
-      return res.status(404).json({ error: "Price record not found" });
-    }
-
-    res.json({ message: "✅ Price deleted successfully" });
-  } catch (error) {
-    console.error("❌ Error deleting price:", error);
-    res.status(500).json({ error: "Failed to delete price" });
   }
 });
 
