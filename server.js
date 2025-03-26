@@ -1,16 +1,19 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
 const app = express();
+app.use(cors());
+app.use(express.json());
 
 // Connect to MongoDB
 mongoose.connect("mongodb+srv://eswarsai8074:GxlEfEfJ2Fw9g7nj@cluster0.fpvov.mongodb.net/test", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 }).then(() => {
-  console.log('MongoDB connected successfully');
+  console.log('✅ MongoDB connected successfully');
 }).catch(err => {
-  console.error('MongoDB connection error:', err);
+  console.error('❌ MongoDB connection error:', err);
 });
 
 // Price Schema
@@ -27,66 +30,53 @@ const priceSchema = new mongoose.Schema({
 
 const Price = mongoose.model('Price', priceSchema);
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-
 /** -------------------------- GET ALL PRICES -------------------------- */
 app.get('/api/prices', async (req, res) => {
   try {
     const prices = await Price.find();
     res.json(prices);
   } catch (error) {
-    console.error('Error fetching prices:', error);
+    console.error('❌ Error fetching prices:', error);
     res.status(500).json({ error: "Failed to fetch prices" });
   }
 });
 
-/** -------------------------- ADD NEW PRICE -------------------------- */
+/** -------------------------- ADD NEW PRICE RECORD -------------------------- */
 app.post('/api/add-price', async (req, res) => {
   try {
-    const { state, district, market, commodity, variety, maxPrice, avgPrice, minPrice } = req.body;
-
-    if (!state || !district || !market || !commodity || !variety || maxPrice === undefined || avgPrice === undefined || minPrice === undefined) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
-
-    const newPrice = new Price({ state, district, market, commodity, variety, maxPrice, avgPrice, minPrice });
+    const newPrice = new Price(req.body);
     await newPrice.save();
-    res.status(201).json({ message: "Price added successfully", price: newPrice });
-
+    res.status(201).json({ message: "Price record added successfully" });
   } catch (error) {
-    console.error('Error adding price:', error);
-    res.status(500).json({ error: "Failed to add price" });
+    console.error('❌ Error adding price:', error);
+    res.status(500).json({ error: "Failed to add price record" });
   }
 });
 
-/** -------------------------- UPDATE PRICE BY ID -------------------------- */
+/** -------------------------- UPDATE EXISTING PRICE RECORD -------------------------- */
 app.put('/api/update-price/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedData = req.body;
+    console.log(`Updating Price ID: ${id}`);
 
-    const updatedPrice = await Price.findByIdAndUpdate(id, updatedData, { new: true });
+    const updatedPrice = await Price.findByIdAndUpdate(id, req.body, { new: true });
 
     if (!updatedPrice) {
       return res.status(404).json({ error: "Price record not found" });
     }
 
-    res.json({ message: "Price updated successfully", price: updatedPrice });
-
+    res.json({ message: "Price record updated successfully", updatedPrice });
   } catch (error) {
-    console.error('Error updating price:', error);
-    res.status(500).json({ error: "Failed to update price" });
+    console.error('❌ Error updating price:', error);
+    res.status(500).json({ error: "Failed to update price record" });
   }
 });
 
-/** -------------------------- DELETE PRICE BY ID -------------------------- */
-/** -------------------------- DELETE PRICE BY ID -------------------------- */
+/** -------------------------- DELETE A PRICE RECORD -------------------------- */
 app.delete('/api/delete-price/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("Deleting price with ID:", id); // ✅ Log ID to verify it’s received
+    console.log("🔍 Deleting price with ID:", id);
 
     if (!id) {
       return res.status(400).json({ error: "ID parameter is required" });
@@ -98,15 +88,13 @@ app.delete('/api/delete-price/:id', async (req, res) => {
       return res.status(404).json({ error: "Price record not found" });
     }
 
-    res.json({ message: "Price deleted successfully" });
-
+    res.json({ message: "✅ Price deleted successfully" });
   } catch (error) {
-    console.error('Error deleting price:', error);
+    console.error('❌ Error deleting price:', error);
     res.status(500).json({ error: "Failed to delete price" });
   }
 });
 
-
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
