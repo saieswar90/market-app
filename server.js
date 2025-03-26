@@ -49,6 +49,7 @@ app.get("/api/districts", async (req, res) => {
 });
 
 /** -------------------------- GET UNIQUE MARKETS BY DISTRICT -------------------------- */
+/** -------------------------- GET ALL MARKETS BY DISTRICT -------------------------- */
 app.get("/api/markets", async (req, res) => {
   try {
     const { district } = req.query;
@@ -56,14 +57,20 @@ app.get("/api/markets", async (req, res) => {
       return res.status(400).json({ error: "District parameter is required" });
     }
 
-    let markets = await Price.find({ district }).distinct("market").collation({ locale: "en", strength: 2 });
+    let markets = await Price.find({ district })
+      .distinct("market")
+      .collation({ locale: "en", strength: 2 });
 
-    // Remove empty/null values, trim, and sort
+    // Normalize Data: Trim spaces, filter duplicates, sort
     markets = markets
       .filter(Boolean)
       .map(m => m.trim())
       .filter((value, index, self) => self.indexOf(value) === index)
       .sort();
+
+    if (markets.length === 0) {
+      return res.status(404).json({ error: "No markets found for this district" });
+    }
 
     res.json(markets);
   } catch (error) {
