@@ -82,9 +82,15 @@ app.put('/api/update-price/:id', async (req, res) => {
 });
 
 /** -------------------------- DELETE PRICE BY ID -------------------------- */
+/** -------------------------- DELETE PRICE BY ID -------------------------- */
 app.delete('/api/delete-price/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("Deleting price with ID:", id); // ✅ Log ID to verify it’s received
+
+    if (!id) {
+      return res.status(400).json({ error: "ID parameter is required" });
+    }
 
     const deletedPrice = await Price.findByIdAndDelete(id);
 
@@ -99,6 +105,7 @@ app.delete('/api/delete-price/:id', async (req, res) => {
     res.status(500).json({ error: "Failed to delete price" });
   }
 });
+
 
 // Start server
 const PORT = process.env.PORT || 5000;
