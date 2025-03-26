@@ -41,12 +41,47 @@ app.get('/api/prices', async (req, res) => {
   }
 });
 
+/** -------------------------- GET UNIQUE DISTRICTS -------------------------- */
+app.get('/api/districts', async (req, res) => {
+  try {
+    const districts = await Price.distinct('district');
+    res.json(districts);
+  } catch (error) {
+    console.error('❌ Error fetching districts:', error);
+    res.status(500).json({ error: "Failed to fetch districts" });
+  }
+});
+
+/** -------------------------- GET MARKETS BY DISTRICT -------------------------- */
+app.get('/api/markets/:district', async (req, res) => {
+  try {
+    const { district } = req.params;
+    const markets = await Price.find({ district }).distinct('market');
+    res.json(markets);
+  } catch (error) {
+    console.error('❌ Error fetching markets:', error);
+    res.status(500).json({ error: "Failed to fetch markets" });
+  }
+});
+
+/** -------------------------- GET COMMODITIES BY MARKET -------------------------- */
+app.get('/api/commodities/:market', async (req, res) => {
+  try {
+    const { market } = req.params;
+    const commodities = await Price.find({ market }).distinct('commodity');
+    res.json(commodities);
+  } catch (error) {
+    console.error('❌ Error fetching commodities:', error);
+    res.status(500).json({ error: "Failed to fetch commodities" });
+  }
+});
+
 /** -------------------------- ADD NEW PRICE RECORD -------------------------- */
 app.post('/api/add-price', async (req, res) => {
   try {
     const newPrice = new Price(req.body);
     await newPrice.save();
-    res.status(201).json({ message: "Price record added successfully" });
+    res.status(201).json({ message: "✅ Price record added successfully" });
   } catch (error) {
     console.error('❌ Error adding price:', error);
     res.status(500).json({ error: "Failed to add price record" });
@@ -65,7 +100,7 @@ app.put('/api/update-price/:id', async (req, res) => {
       return res.status(404).json({ error: "Price record not found" });
     }
 
-    res.json({ message: "Price record updated successfully", updatedPrice });
+    res.json({ message: "✅ Price record updated successfully", updatedPrice });
   } catch (error) {
     console.error('❌ Error updating price:', error);
     res.status(500).json({ error: "Failed to update price record" });
