@@ -52,11 +52,15 @@ app.get("/api/markets", async (req, res) => {
       return res.status(400).json({ error: "District parameter is required" });
     }
 
-    // Find all markets for the given district
-    const records = await Price.find({ district: { $regex: `^${district}$`, $options: "i" } });
+    // Fetch all records matching the district (case-insensitive match)
+    const records = await Price.find({
+      district: { $regex: new RegExp(`^${district}$`, "i") },
+    });
 
-    // Extract unique markets
-    let markets = [...new Set(records.map(record => record.market?.trim()).filter(Boolean))].sort();
+    // Extract all markets under the district
+    const markets = [
+      ...new Set(records.map((record) => record.market?.trim()).filter(Boolean)),
+    ].sort();
 
     if (markets.length === 0) {
       return res.status(404).json({ error: "No markets found for this district" });
@@ -68,6 +72,7 @@ app.get("/api/markets", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch markets" });
   }
 });
+
 
 
 /** -------------------------- GET UNIQUE COMMODITIES BY MARKET -------------------------- */
