@@ -31,111 +31,72 @@ const Price = mongoose.model('Price', priceSchema);
 app.use(cors());
 app.use(express.json());
 
-/** -------------------------- GET UNIQUE DISTRICTS -------------------------- */
-app.get('/api/districts', async (req, res) => {
+/** -------------------------- GET ALL PRICES -------------------------- */
+app.get('/api/prices', async (req, res) => {
   try {
-    const districts = await Price.aggregate([
-      {
-        $group: {
-          _id: { $toLower: "$district" }, 
-          district: { $first: "$district" }
-        }
-      },
-      { $project: { _id: 0, district: 1 } }
-    ]);
-    res.json(districts.map(d => d.district));
-  } catch (error) {
-    console.error('Error fetching districts:', error);
-    res.status(500).json({ error: "Failed to fetch districts" });
-  }
-});
-
-/** -------------------------- GET UNIQUE MARKETS BY DISTRICT -------------------------- */
-app.get('/api/markets', async (req, res) => {
-  try {
-    const { district } = req.query;
-    if (!district) {
-      return res.status(400).json({ error: "District parameter is required" });
-    }
-
-    const markets = await Price.aggregate([
-      { $match: { district: { $regex: `^${district}$`, $options: 'i' } } },
-      { $group: { _id: { $toLower: "$market" }, market: { $first: "$market" } } },
-      { $project: { _id: 0, market: 1 } }
-    ]);
-
-    if (markets.length === 0) {
-      return res.status(404).json({ error: "No markets found for this district" });
-    }
-
-    res.json(markets.map(m => m.market));
-  } catch (error) {
-    console.error('Error fetching markets:', error);
-    res.status(500).json({ error: "Failed to fetch markets" });
-  }
-});
-
-/** -------------------------- GET PRICES BASED ON DISTRICT & MARKET -------------------------- */
-app.get('/api/prices-by-filters', async (req, res) => {
-  try {
-    const { district, market } = req.query;
-    if (!district || !market) {
-      return res.status(400).json({ error: "District and market parameters are required" });
-    }
-
-    const prices = await Price.find({
-      district: { $regex: `^${district}$`, $options: 'i' },
-      market: { $regex: `^${market}$`, $options: 'i' }
-    });
-
-    if (prices.length === 0) {
-      return res.status(404).json({ error: "No data found for the selected district and market" });
-    }
-
+    const prices = await Price.find();
     res.json(prices);
   } catch (error) {
-    console.error('Error fetching prices by filters:', error);
+    console.error('Error fetching prices:', error);
     res.status(500).json({ error: "Failed to fetch prices" });
   }
 });
 
-/** -------------------------- ADD NEW PRICE RECORD -------------------------- */
-app.post('/api/prices', async (req, res) => {
+/** -------------------------- ADD NEW PRICE -------------------------- */
+app.post('/api/add-price', async (req, res) => {
   try {
-    const newPrice = new Price(req.body);
+    const { state, district, market, commodity, variety, maxPrice, avgPrice, minPrice } = req.body;
+
+    if (!state || !district || !market || !commodity || !variety || maxPrice === undefined || avgPrice === undefined || minPrice === undefined) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const newPrice = new Price({ state, district, market, commodity, variety, maxPrice, avgPrice, minPrice });
     await newPrice.save();
-    res.status(201).json({ message: "Price record added successfully", price: newPrice });
+    res.status(201).json({ message: "Price added successfully", price: newPrice });
+
   } catch (error) {
-    console.error('Error adding price record:', error);
-    res.status(500).json({ error: "Failed to add price record" });
+    console.error('Error adding price:', error);
+    res.status(500).json({ error: "Failed to add price" });
   }
 });
 
-/** -------------------------- UPDATE EXISTING PRICE RECORD -------------------------- */
-app.put('/api/prices/:id', async (req, res) => {
+/** -------------------------- UPDATE PRICE BY ID -------------------------- */
+app.put('/api/update-price/:id', async (req, res) => {
   try {
-    const updatedPrice = await Price.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    const updatedPrice = await Price.findByIdAndUpdate(id, updatedData, { new: true });
+
     if (!updatedPrice) {
       return res.status(404).json({ error: "Price record not found" });
     }
-    res.json({ message: "Price record updated successfully", price: updatedPrice });
+
+    res.json({ message: "Price updated successfully", price: updatedPrice });
+
   } catch (error) {
-    console.error('Error updating price record:', error);
-    res.status(500).json({ error: "Failed to update price record" });
+    console.error('Error updating price:', error);
+    res.status(500).json({ error: "Failed to update price" });
   }
 });
 
-/** -------------------------- DELETE A PRICE RECORD -------------------------- */
-app.delete('/api/prices/:id', async (req, res) => {
+/** -------------------------- DELETE PRICE BY ID -------------------------- */
+app.delete('/api/delete-price/:id', async (req, res) => {
   try {
-    const deletedPrice = await Price.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+
+    const deletedPrice = await Price.findByIdAndDelete(id);
+
     if (!deletedPrice) {
       return res.status(404).json({ error: "Price record not found" });
     }
-    res.json({ message: "Price record deleted successfully" });
+
+    res.json({ message: "Price deleted successfully" });
+
   } catch (error) {
-    console.error('Error deleting price record:', error);
-    res.status(500).json({ error: "Failed to delete price record" });
+    console.error('Error deleting price:', error);
+    res.status(500).json({ error: "Failed to delete price" });
   }
 });
 
