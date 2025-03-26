@@ -64,7 +64,6 @@ app.get('/api/markets', async (req, res) => {
       { $project: { _id: 0, market: 1 } }
     ]);
 
-    // Ensure markets are only returned if data exists
     if (markets.length === 0) {
       return res.status(404).json({ error: "No markets found for this district" });
     }
@@ -89,7 +88,6 @@ app.get('/api/prices-by-filters', async (req, res) => {
       market: { $regex: `^${market}$`, $options: 'i' }
     });
 
-    // Ensure prices exist before returning data
     if (prices.length === 0) {
       return res.status(404).json({ error: "No data found for the selected district and market" });
     }
@@ -98,6 +96,46 @@ app.get('/api/prices-by-filters', async (req, res) => {
   } catch (error) {
     console.error('Error fetching prices by filters:', error);
     res.status(500).json({ error: "Failed to fetch prices" });
+  }
+});
+
+/** -------------------------- ADD NEW PRICE RECORD -------------------------- */
+app.post('/api/prices', async (req, res) => {
+  try {
+    const newPrice = new Price(req.body);
+    await newPrice.save();
+    res.status(201).json({ message: "Price record added successfully", price: newPrice });
+  } catch (error) {
+    console.error('Error adding price record:', error);
+    res.status(500).json({ error: "Failed to add price record" });
+  }
+});
+
+/** -------------------------- UPDATE EXISTING PRICE RECORD -------------------------- */
+app.put('/api/prices/:id', async (req, res) => {
+  try {
+    const updatedPrice = await Price.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedPrice) {
+      return res.status(404).json({ error: "Price record not found" });
+    }
+    res.json({ message: "Price record updated successfully", price: updatedPrice });
+  } catch (error) {
+    console.error('Error updating price record:', error);
+    res.status(500).json({ error: "Failed to update price record" });
+  }
+});
+
+/** -------------------------- DELETE A PRICE RECORD -------------------------- */
+app.delete('/api/prices/:id', async (req, res) => {
+  try {
+    const deletedPrice = await Price.findByIdAndDelete(req.params.id);
+    if (!deletedPrice) {
+      return res.status(404).json({ error: "Price record not found" });
+    }
+    res.json({ message: "Price record deleted successfully" });
+  } catch (error) {
+    console.error('Error deleting price record:', error);
+    res.status(500).json({ error: "Failed to delete price record" });
   }
 });
 
