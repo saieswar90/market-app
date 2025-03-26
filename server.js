@@ -50,6 +50,7 @@ app.get("/api/districts", async (req, res) => {
 
 /** -------------------------- GET UNIQUE MARKETS BY DISTRICT -------------------------- */
 /** -------------------------- GET ALL MARKETS BY DISTRICT -------------------------- */
+/** -------------------------- GET ALL MARKETS BY DISTRICT -------------------------- */
 app.get("/api/markets", async (req, res) => {
   try {
     const { district } = req.query;
@@ -57,22 +58,14 @@ app.get("/api/markets", async (req, res) => {
       return res.status(400).json({ error: "District parameter is required" });
     }
 
-    let markets = await Price.find({ district })
-      .distinct("market")
-      .collation({ locale: "en", strength: 2 });
+    // Find all unique markets for the given district
+    const markets = await Price.find({ district }).distinct("market");
 
-    // Normalize Data: Trim spaces, filter duplicates, sort
-    markets = markets
-      .filter(Boolean)
-      .map(m => m.trim())
-      .filter((value, index, self) => self.indexOf(value) === index)
-      .sort();
-
-    if (markets.length === 0) {
+    if (!markets.length) {
       return res.status(404).json({ error: "No markets found for this district" });
     }
 
-    res.json(markets);
+    res.json(markets.sort()); // Sorting for better UI experience
   } catch (error) {
     console.error("❌ Error fetching markets:", error);
     res.status(500).json({ error: "Failed to fetch markets" });
