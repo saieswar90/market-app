@@ -74,23 +74,22 @@ app.delete('/api/delete-price/:id', async (req, res) => {
 
 // --- USER APP ENDPOINTS ---
 // GET unique districts (case-insensitive)
-// GET unique districts (case-insensitive)
 app.get('/api/districts', async (req, res) => {
   try {
     const districts = await Price.aggregate([
       { 
         $project: { 
-          district: { $trim: { input: { $toLower: "$district" } } }  // Trimming whitespace and converting to lowercase for case insensitivity
+          district: { $trim: { input: { $toLower: "$district" } } }
         }
       },
       { 
         $group: { 
-          _id: "$district", // Group by the lowercase trimmed district name
-          district: { $first: "$district" } // Pick the first occurrence of each district
+          _id: "$district", 
+          district: { $first: "$district" } 
         }
       },
       { 
-        $project: { _id: 0, district: 1 } // Remove the _id from the output
+        $project: { _id: 0, district: 1 } 
       }
     ]);
     res.json(districts.map(d => d.district));
@@ -99,7 +98,6 @@ app.get('/api/districts', async (req, res) => {
     res.status(500).json({ error: "Failed to fetch districts" });
   }
 });
-
 
 // GET unique markets by district (case-insensitive)
 app.get('/api/markets', async (req, res) => {
@@ -121,26 +119,32 @@ app.get('/api/markets', async (req, res) => {
   }
 });
 
-// GET all prices for selected filters
-app.get('/api/prices-by-filters', async (req, res) => {
+// GET unique commodities (crops) by district & market
+app.get('/api/crops', async (req, res) => {
   try {
     const { district, market } = req.query;
     if (!district || !market) {
       return res.status(400).json({ error: "District and market parameters are required" });
     }
 
-    const prices = await Price.find({
-      district: { $regex: `^${district}$`, $options: 'i' },
-      market: { $regex: `^${market}$`, $options: 'i' }
-    });
-    res.json(prices);
+    const crops = await Price.aggregate([
+      { 
+        $match: { 
+          district: { $regex: `^${district}$`, $options: 'i' }, 
+          market: { $regex: `^${market}$`, $options: 'i' } 
+        } 
+      },
+      { $group: { _id: { $toLower: "$commodity" }, commodity: { $first: "$commodity" } } },
+      { $project: { _id: 0, commodity: 1 } }
+    ]);
+
+    res.json(crops.map(c => c.commodity));
   } catch (error) {
-    console.error('Error fetching prices by filters:', error);
-    res.status(500).json({ error: "Failed to fetch prices" });
+    console.error('Error fetching crops:', error);
+    res.status(500).json({ error: "Failed to fetch crops" });
   }
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
