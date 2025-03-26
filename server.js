@@ -35,11 +35,7 @@ app.get("/api/districts", async (req, res) => {
     let districts = await Price.distinct("district").collation({ locale: "en", strength: 2 });
 
     // Remove empty/null values, trim, and sort
-    districts = districts
-      .filter(Boolean) // Remove null/undefined
-      .map(d => d.trim()) // Remove spaces
-      .filter((value, index, self) => self.indexOf(value) === index) // Ensure uniqueness
-      .sort();
+    districts = [...new Set(districts.map(d => d?.trim()).filter(Boolean))].sort();
 
     res.json(districts);
   } catch (error) {
@@ -48,8 +44,6 @@ app.get("/api/districts", async (req, res) => {
   }
 });
 
-/** -------------------------- GET UNIQUE MARKETS BY DISTRICT -------------------------- */
-/** -------------------------- GET ALL MARKETS BY DISTRICT -------------------------- */
 /** -------------------------- GET ALL MARKETS BY DISTRICT -------------------------- */
 app.get("/api/markets", async (req, res) => {
   try {
@@ -58,14 +52,17 @@ app.get("/api/markets", async (req, res) => {
       return res.status(400).json({ error: "District parameter is required" });
     }
 
-    // Find all unique markets for the given district
-    const markets = await Price.find({ district }).distinct("market");
+    let markets = await Price.find({ district: { $regex: `^${district}$`, $options: "i" } })
+      .distinct("market");
 
-    if (!markets.length) {
+    // Normalize Data: Trim spaces, remove duplicates, sort
+    markets = [...new Set(markets.map(m => m?.trim()).filter(Boolean))].sort();
+
+    if (markets.length === 0) {
       return res.status(404).json({ error: "No markets found for this district" });
     }
 
-    res.json(markets.sort()); // Sorting for better UI experience
+    res.json(markets);
   } catch (error) {
     console.error("❌ Error fetching markets:", error);
     res.status(500).json({ error: "Failed to fetch markets" });
@@ -80,14 +77,11 @@ app.get("/api/commodities", async (req, res) => {
       return res.status(400).json({ error: "Market parameter is required" });
     }
 
-    let commodities = await Price.find({ market }).distinct("commodity").collation({ locale: "en", strength: 2 });
+    let commodities = await Price.find({ market: { $regex: `^${market}$`, $options: "i" } })
+      .distinct("commodity");
 
     // Remove empty/null values, trim, and sort
-    commodities = commodities
-      .filter(Boolean)
-      .map(c => c.trim())
-      .filter((value, index, self) => self.indexOf(value) === index)
-      .sort();
+    commodities = [...new Set(commodities.map(c => c?.trim()).filter(Boolean))].sort();
 
     res.json(commodities);
   } catch (error) {
@@ -104,7 +98,10 @@ app.get("/api/prices", async (req, res) => {
       return res.status(400).json({ error: "District and market parameters are required" });
     }
 
-    const prices = await Price.find({ district, market });
+    const prices = await Price.find({
+      district: { $regex: `^${district}$`, $options: "i" },
+      market: { $regex: `^${market}$`, $options: "i" }
+    });
 
     res.json(prices);
   } catch (error) {
