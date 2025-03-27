@@ -101,6 +101,37 @@ app.get("/api/commodities", async (req, res) => {
   }
 });
 
+app.get("/api/pricesm", async (req, res) => {
+  try {
+    const { district, market } = req.query;
+
+    // Ensure at least one filter is provided
+    if (!district || !market) {
+      return res.status(400).json({ error: "Both district and market are required" });
+    }
+
+    // Case-insensitive filtering
+    const query = {
+      district: { $regex: new RegExp(`^${district}$`, "i") },
+      market: { $regex: new RegExp(`^${market}$`, "i") }
+    };
+
+    const prices = await Price.find(query).select(
+      "_id state district market commodity variety maxPrice avgPrice minPrice"
+    );
+
+    if (prices.length === 0) {
+      return res.status(404).json({ error: "No data found for selected district and market" });
+    }
+
+    res.json(prices);
+  } catch (error) {
+    console.error("❌ Error fetching prices:", error);
+    res.status(500).json({ error: "Failed to fetch prices" });
+  }
+});
+
+
 /** -------------------------- GET PRICES BY DISTRICT & MARKET -------------------------- */
 app.get('/api/prices', async (req, res) => {
   try {
