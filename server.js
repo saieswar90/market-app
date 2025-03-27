@@ -102,68 +102,47 @@ app.get("/api/commodities", async (req, res) => {
 });
 
 /** -------------------------- GET PRICES BY DISTRICT & MARKET -------------------------- */
-app.get("/api/prices", async (req, res) => {
+app.get('/api/prices', async (req, res) => {
   try {
-    const { district, market } = req.query;
-    if (!district || !market) {
-      return res.status(400).json({ error: "District and market parameters are required" });
-    }
-
-    const prices = await Price.find({
-      district: { $regex: `^${district}$`, $options: "i" },
-      market: { $regex: `^${market}$`, $options: "i" }
-    });
-
+    const prices = await Price.find().select('_id state district market commodity variety maxPrice avgPrice minPrice');
     res.json(prices);
   } catch (error) {
-    console.error("❌ Error fetching prices:", error);
     res.status(500).json({ error: "Failed to fetch prices" });
   }
 });
-app.post("/api/add-price", async (req, res) => {
+
+// POST add price
+app.post('/api/add-price', async (req, res) => {
   try {
     const newPrice = new Price(req.body);
     await newPrice.save();
-    res.status(201).json({ message: "Price added successfully" });
+    res.json({ success: true });
   } catch (error) {
-    console.error("❌ Error adding price:", error);
     res.status(500).json({ error: "Failed to add price" });
   }
 });
 
-/** -------------------------- UPDATE PRICE -------------------------- */
-app.put("/api/update-price/:id", async (req, res) => {
+// PUT update price
+app.put('/api/update-price/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const updatedPrice = await Price.findByIdAndUpdate(id, req.body, { new: true });
-
-    if (!updatedPrice) {
-      return res.status(404).json({ error: "Price not found" });
-    }
-
-    res.json({ message: "Price updated successfully" });
+    await Price.findByIdAndUpdate(req.params.id, req.body);
+    res.json({ success: true });
   } catch (error) {
-    console.error("❌ Error updating price:", error);
     res.status(500).json({ error: "Failed to update price" });
   }
 });
 
-/** -------------------------- DELETE PRICE -------------------------- */
-app.delete("/api/delete-price/:id", async (req, res) => {
+// DELETE price
+app.delete('/api/delete-price/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const deletedPrice = await Price.findByIdAndDelete(id);
-
-    if (!deletedPrice) {
-      return res.status(404).json({ error: "Price not found" });
-    }
-
-    res.json({ message: "Price deleted successfully" });
+    await Price.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
   } catch (error) {
-    console.error("❌ Error deleting price:", error);
     res.status(500).json({ error: "Failed to delete price" });
   }
 });
+
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
